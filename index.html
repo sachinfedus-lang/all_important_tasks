@@ -56,7 +56,7 @@
             <button @click="selectedTasks = []" class="text-slate-400 hover:text-white text-xs uppercase font-bold">Cancel</button>
         </div>
 
-        <div class="mb-8 bg-slate-900 rounded-[2rem] p-6 md:p-8 text-white shadow-xl">
+        <div class="mb-6 bg-slate-900 rounded-[2rem] p-6 md:p-8 text-white shadow-xl">
             <h2 class="text-xs font-bold mb-4 uppercase tracking-widest text-slate-400">Add New Main Task</h2>
             <div class="flex flex-col md:flex-row gap-3">
                 <input type="text" x-model="newMainTaskName" @keyup.enter="addMainTask()" 
@@ -69,6 +69,16 @@
             </div>
         </div>
 
+        <div class="mb-10 relative group">
+            <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </div>
+            <input type="text" x-model="searchQuery" placeholder="Search tasks by name..." 
+                class="block w-full pl-12 pr-5 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-400 text-slate-700 font-medium transition-all">
+        </div>
+
         <template x-if="loading">
             <div class="flex flex-col items-center py-24 text-slate-400">
                 <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -77,7 +87,7 @@
         </template>
 
         <div class="space-y-6" x-show="!loading" x-cloak>
-            <template x-for="(item, taskIndex) in tasks" :key="taskIndex">
+            <template x-for="(item, taskIndex) in filteredTasks" :key="taskIndex">
                 <div class="bg-white border border-slate-200 rounded-[2.5rem] p-6 md:p-8 shadow-sm relative group hover:border-blue-100 transition-all">
                     
                     <div class="absolute -left-3 top-1/2 -translate-y-1/2">
@@ -142,15 +152,19 @@
         </div>
     </main>
 
+    <footer class="text-center py-12 text-slate-400 text-sm font-medium tracking-wide">
+        &copy; 2026 Fedus Brand Management
+    </footer>
+
     <script>
         function taskDashboard() {
             return {
                 loading: true,
                 syncing: false,
+                searchQuery: '',
                 tasks: [],
                 selectedTasks: [],
                 newMainTaskName: '',
-                // Updated API URL
                 API_URL: 'https://script.google.com/macros/s/AKfycbycI4-Ax4U3aqvt9-6KhYCU-sQCycmXu9jCg3MK76f-IAv5sqrsVmov3uMWANlYa01NAQ/exec',
 
                 async init() {
@@ -215,6 +229,12 @@
                         await fetch(url, { mode: 'no-cors' });
                     } catch (e) {}
                     setTimeout(() => { this.syncing = false; }, 800);
+                },
+
+                get filteredTasks() {
+                    if (!this.searchQuery) return this.tasks;
+                    const q = this.searchQuery.toLowerCase();
+                    return this.tasks.filter(t => t.content.toLowerCase().includes(q));
                 },
 
                 get avgProgress() {
