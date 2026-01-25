@@ -7,98 +7,92 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
-        .slider-thumb::-webkit-slider-thumb {
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
             height: 20px;
+            width: 20px;
+            border-radius: 50%;
             background: #2563eb;
             cursor: pointer;
-            border-radius: 50%;
             border: 3px solid white;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .heading-gradient {
-            background: linear-gradient(to right, #f1f5f9, #ffffff);
-            border-left: 6px solid #2563eb;
+        .heading-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
         }
     </style>
 </head>
-<body x-data="taskDashboard()">
+<body x-data="taskChart()">
 
-    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div class="max-w-6xl mx-auto px-4 h-20 flex items-center justify-between">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                 </div>
-                <h1 class="text-xl font-extrabold text-gray-900 tracking-tight">Fedus <span class="text-blue-600">Task Progress Chart</span></h1>
+                <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Fedus <span class="text-blue-600">Task Progress Chart</span></h1>
             </div>
-            <div class="flex items-center gap-6">
-                <div class="text-right border-l pl-6 border-gray-100">
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Completion Rate</p>
-                    <p class="text-2xl font-black text-blue-600" x-text="averageProgress + '%'"></p>
+            
+            <div class="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                <div class="text-right">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1">Total Completion</p>
+                    <p class="text-xl font-black text-blue-600" x-text="avgProgress + '%'"></p>
                 </div>
             </div>
         </div>
-    </nav>
+    </header>
 
-    <main class="max-w-5xl mx-auto px-4 py-10">
+    <main class="max-w-5xl mx-auto px-4 py-8">
         
-        <div class="mb-10 flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div class="relative w-full md:w-full">
-                <input type="text" x-model="search" placeholder="Search tasks, meetings, or names..." 
-                    class="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-50 focus:border-blue-400 outline-none transition-all shadow-sm text-lg">
-                <svg class="w-6 h-6 text-gray-400 absolute left-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </div>
+        <div class="mb-8">
+            <input type="text" x-model="search" placeholder="Search tasks or dates..." 
+                class="w-full bg-white border border-slate-200 rounded-2xl px-6 py-4 shadow-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-600 font-medium transition-all">
         </div>
 
         <template x-if="loading">
-            <div class="flex flex-col items-center justify-center py-24">
-                <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-100 border-t-blue-600 mb-4"></div>
-                <p class="text-gray-500 font-medium">Syncing with your Google Sheet...</p>
+            <div class="flex flex-col items-center justify-center py-20">
+                <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <p class="mt-4 text-slate-500 font-medium italic">Synchronizing with your data...</p>
             </div>
         </template>
 
         <div class="space-y-6" x-show="!loading" x-transition>
-            <template x-for="(item, index) in filteredItems" :key="index">
+            <template x-for="(item, index) in filteredData" :key="index">
                 <div>
                     <template x-if="item.isHeading">
-                        <div class="heading-gradient mt-12 mb-6 p-6 rounded-r-2xl shadow-sm">
+                        <div class="heading-card rounded-2xl p-6 shadow-lg mb-8 mt-12 first:mt-0 transform transition-transform">
                             <div class="flex items-center gap-3 mb-2">
-                                <div class="w-2 h-2 rounded-full bg-blue-600"></div>
-                                <span class="text-xs font-bold text-blue-600 uppercase tracking-widest">Meeting / Section</span>
+                                <span class="bg-blue-500/20 text-blue-300 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded">Session Group</span>
                             </div>
-                            <h2 class="text-2xl md:text-3xl font-extrabold text-gray-800 leading-tight" x-text="item.name"></h2>
+                            <h2 class="text-2xl md:text-3xl font-bold text-white tracking-tight" x-text="item.content"></h2>
                         </div>
                     </template>
 
                     <template x-if="!item.isHeading">
-                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all group mb-3">
+                        <div class="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-blue-100 transition-all mb-3">
                             <div class="flex flex-col md:flex-row md:items-center gap-8">
-                                
                                 <div class="flex-1">
-                                    <p class="text-gray-700 font-semibold text-lg leading-relaxed" x-text="item.name"></p>
+                                    <p class="text-slate-700 font-medium text-lg leading-snug" x-text="item.content"></p>
                                 </div>
 
-                                <div class="w-full md:w-80 flex flex-col gap-3">
-                                    <div class="flex justify-between items-end">
-                                        <span class="text-[11px] font-black text-gray-400 uppercase tracking-widest">Progress Level</span>
-                                        <span class="text-lg font-black text-blue-600" x-text="item.progress + '%'"></span>
+                                <div class="w-full md:w-72 space-y-3 border-t md:border-t-0 md:border-l border-slate-50 pt-4 md:pt-0 md:pl-6">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-xs font-bold text-slate-400 uppercase">Progress</span>
+                                        <span class="text-base font-black text-blue-600" x-text="item.progress + '%'"></span>
                                     </div>
                                     
-                                    <div class="relative flex items-center group/slider">
-                                        <input type="range" min="0" max="100" x-model="item.progress" @input="saveProgress()"
-                                            class="w-full h-2.5 bg-gray-100 rounded-lg appearance-none cursor-pointer slider-thumb accent-blue-600">
+                                    <div class="relative flex items-center h-4">
+                                        <input type="range" min="0" max="100" x-model="item.progress" @input="save()"
+                                            class="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600">
                                     </div>
                                     
-                                    <div class="w-full bg-gray-50 h-2 rounded-full overflow-hidden mt-1 ring-1 ring-gray-100">
-                                        <div class="h-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(37,99,235,0.3)]" 
+                                    <div class="w-full bg-slate-50 h-1.5 rounded-full overflow-hidden">
+                                        <div class="h-full transition-all duration-300 shadow-[0_0_8px_rgba(37,99,235,0.2)]" 
                                             :style="`width: ${item.progress}%`" 
-                                            :class="item.progress == 100 ? 'bg-green-500' : 'bg-blue-600'"></div>
+                                            :class="item.progress == 100 ? 'bg-emerald-500' : 'bg-blue-600'"></div>
                                     </div>
                                 </div>
                             </div>
@@ -108,89 +102,88 @@
             </template>
         </div>
 
-        <template x-if="!loading && filteredItems.length === 0">
-            <div class="text-center py-24 bg-white rounded-[2rem] border-2 border-dashed border-gray-200">
-                <p class="text-gray-400 text-lg">No matches found in the chart.</p>
+        <template x-if="!loading && filteredData.length === 0">
+            <div class="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
+                <p class="text-slate-400 font-medium">No results found for your search.</p>
             </div>
         </template>
     </main>
 
+    <footer class="text-center py-10">
+        <p class="text-slate-400 text-sm">Update your Google Sheet to see changes here instantly.</p>
+    </footer>
+
     <script>
-        function taskDashboard() {
+        function taskChart() {
             return {
                 loading: true,
                 search: '',
-                items: [],
+                dataItems: [],
                 csvUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRfWzrWYdJ3EUQFqL2XeAmeU3O1uvQH1IGlZRD3JupmvBnnorlnKMqX2m5w9YnvePqZWqokRpNEzeHd/pub?gid=0&single=true&output=csv',
-                
+
                 async init() {
-                    await this.fetchData();
+                    this.fetch();
                 },
 
-                async fetchData() {
+                async fetch() {
                     this.loading = true;
                     try {
-                        const response = await fetch(this.csvUrl);
-                        const csvText = await response.text();
+                        const res = await fetch(this.csvUrl);
+                        const text = await res.text();
                         
-                        Papa.parse(csvText, {
+                        Papa.parse(text, {
                             header: false,
                             skipEmptyLines: true,
                             complete: (results) => {
-                                const savedProgress = JSON.parse(localStorage.getItem('fedus_v2_progress') || '{}');
+                                const stored = JSON.parse(localStorage.getItem('fedus_v3_store') || '{}');
                                 
-                                this.items = results.data
-                                    .map((row, idx) => {
-                                        const content = row[0]?.trim();
-                                        if (!content || content.length < 2) return null;
+                                // DETECT HEADINGS BY DATE KEYWORDS
+                                const datePattern = /\b(January|February|March|April|May|June|July|August|September|October|November|December|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|Week|Day)\b/i;
+
+                                this.dataItems = results.data
+                                    .map(row => {
+                                        const rawContent = row[0]?.trim();
+                                        if (!rawContent || rawContent.length < 2) return null;
                                         
-                                        // HEADING DETECTION LOGIC
-                                        // 1. Contains a colon (e.g. "Name : Date")
-                                        // 2. Starts with a single number and dot (e.g. "2. Nakul")
-                                        // 3. Very short (under 25 chars) and doesn't end with a period
-                                        const isHeading = content.includes(':') || 
-                                                         /^\d+\.\s/.test(content) || 
-                                                         (content.length < 25 && !content.endsWith('.'));
-                                        
-                                        const id = btoa(content).substring(0, 20);
+                                        const isHeading = datePattern.test(rawContent);
+                                        const id = btoa(rawContent).substring(0, 24);
 
                                         return {
                                             id: id,
-                                            name: content,
+                                            content: rawContent,
                                             isHeading: isHeading,
-                                            progress: isHeading ? 0 : (savedProgress[id] || 0)
+                                            progress: isHeading ? 0 : (stored[id] || 0)
                                         };
                                     })
-                                    .filter(t => t !== null);
-                                    
+                                    .filter(x => x !== null);
                                 this.loading = false;
                             }
                         });
-                    } catch (error) {
-                        console.error("Error loading CSV:", error);
+                    } catch (e) {
+                        console.error(e);
                         this.loading = false;
                     }
                 },
 
-                saveProgress() {
-                    const progressMap = {};
-                    this.items.forEach(item => {
-                        if (!item.isHeading) progressMap[item.id] = item.progress;
+                save() {
+                    const map = {};
+                    this.dataItems.forEach(i => {
+                        if (!i.isHeading) map[i.id] = i.progress;
                     });
-                    localStorage.setItem('fedus_v2_progress', JSON.stringify(progressMap));
+                    localStorage.setItem('fedus_v3_store', JSON.stringify(map));
                 },
 
-                get filteredItems() {
-                    if (!this.search) return this.items;
-                    const q = this.search.toLowerCase();
-                    return this.items.filter(item => item.name.toLowerCase().includes(q));
+                get filteredData() {
+                    if (!this.search) return this.dataItems;
+                    const s = this.search.toLowerCase();
+                    return this.dataItems.filter(i => i.content.toLowerCase().includes(s));
                 },
 
-                get averageProgress() {
-                    const tasks = this.items.filter(i => !i.isHeading);
+                get avgProgress() {
+                    const tasks = this.dataItems.filter(i => !i.isHeading);
                     if (tasks.length === 0) return 0;
-                    const sum = tasks.reduce((acc, t) => acc + parseInt(t.progress), 0);
-                    return Math.round(sum / tasks.length);
+                    const total = tasks.reduce((acc, t) => acc + parseInt(t.progress), 0);
+                    return Math.round(total / tasks.length);
                 }
             }
         }
