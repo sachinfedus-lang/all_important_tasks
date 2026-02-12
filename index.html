@@ -3,114 +3,473 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fedus Task Pro Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <title>Task Dashboard</title>
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; }
-        [x-cloak] { display: none !important; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ced4da;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .tasks-container {
+            padding: 30px;
+        }
+
+        .task-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .task-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-item.completed {
+            background: #f8f9fa;
+            opacity: 0.8;
+        }
+
+        .task-checkbox {
+            width: 24px;
+            height: 24px;
+            margin-right: 15px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .task-text {
+            flex: 1;
+            font-size: 16px;
+            color: #495057;
+        }
+
+        .task-item.completed .task-text {
+            text-decoration: line-through;
+            color: #adb5bd;
+        }
+
+        .task-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-incomplete {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            font-size: 18px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 30px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
     </style>
 </head>
-<body x-data="taskDashboard()">
-
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 px-4 h-20 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-            <h1 class="text-lg font-extrabold text-slate-900">Fedus <span class="text-blue-600">Task Pro</span></h1>
-            <select x-model="currentSheet" @change="pullData()" class="bg-slate-100 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500">
-                <template x-for="name in sheetNames" :key="name">
-                    <option :value="name" x-text="name"></option>
-                </template>
-            </select>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Task Dashboard</h1>
+            <p>Manage your tasks across all sheets</p>
         </div>
-        <div class="bg-blue-50 px-4 py-1 rounded-full border border-blue-100 text-blue-700 font-black" x-text="avgProgress + '%'"></div>
-    </header>
 
-    <main class="max-w-4xl mx-auto px-4 py-10">
-        <div class="mb-8 bg-slate-900 rounded-[2rem] p-6 text-white shadow-xl">
-            <h2 class="text-xs font-bold mb-4 uppercase tracking-widest text-slate-400">Add Task to <span x-text="currentSheet" class="text-blue-400"></span></h2>
-            <div class="flex gap-3">
-                <input type="text" x-model="newMainTaskName" @keyup.enter="addMainTask()" placeholder="Enter task name..." class="flex-1 bg-white/10 rounded-2xl px-5 py-4 outline-none focus:bg-white focus:text-slate-900 transition-all text-white">
-                <button @click="addMainTask()" class="bg-blue-600 px-8 py-4 rounded-2xl font-bold hover:bg-blue-500 transition-all">Create</button>
+        <div class="controls">
+            <div class="control-group">
+                <label for="sheetSelect">Select Sheet:</label>
+                <select id="sheetSelect">
+                    <option value="">Loading sheets...</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="newTask">Add New Task:</label>
+                <input type="text" id="newTask" placeholder="Enter task description...">
+            </div>
+
+            <div class="button-group">
+                <button id="addTaskBtn">➕ Add Task</button>
+                <button id="refreshBtn">🔄 Refresh</button>
             </div>
         </div>
 
-        <template x-if="loading">
-            <div class="text-center py-20 text-slate-400 animate-pulse">Syncing with <span x-text="currentSheet"></span>...</div>
-        </template>
-
-        <div class="space-y-4" x-show="!loading" x-cloak>
-            <template x-for="(item, index) in tasks" :key="index">
-                <div class="bg-white border border-slate-200 rounded-[1.5rem] p-5 flex items-center justify-between hover:border-blue-300 transition-all">
-                    <div class="flex items-center gap-4">
-                        <input type="checkbox" 
-                               :checked="item.progress == 100" 
-                               @change="toggleComplete(item)"
-                               class="w-6 h-6 rounded-full border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
-                        <span class="text-lg font-semibold text-slate-700" :class="item.progress == 100 ? 'line-through text-slate-300' : ''" x-text="item.content"></span>
-                    </div>
-                    <button @click="deleteSingle(item)" class="text-slate-300 hover:text-red-500">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>
-                </div>
-            </template>
+        <div class="tasks-container" id="tasksContainer">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading tasks...</p>
+            </div>
         </div>
-    </main>
+    </div>
 
     <script>
-        function taskDashboard() {
-            return {
-                loading: true,
-                tasks: [],
-                sheetNames: [],
-                currentSheet: '',
-                newMainTaskName: '',
-                API_URL: 'https://script.google.com/macros/s/AKfycbycI4-Ax4U3aqvt9-6KhYCU-sQCycmXu9jCg3MK76f-IAv5sqrsVmov3uMWANlYa01NAQ/exec',
+        // Configuration
+        const CONFIG = {
+            scriptUrl: 'https://script.google.com/macros/s/AKfycbxWNnEXZZLqmcW8G3qKJ39PaisPacUPLJ88BAOZfKfe_OQfeLI7tqIUIrvOXtXUn1hpWQ/exec'
+        };
 
-                async init() {
-                    await this.fetchSheets();
-                },
+        let currentSheet = '';
+        let allSheets = [];
 
-                async fetchSheets() {
-                    const res = await fetch(`${this.API_URL}?action=getSheets`);
-                    this.sheetNames = await res.json();
-                    this.currentSheet = this.sheetNames[0];
-                    await this.pullData();
-                },
+        // Initialize the dashboard
+        async function init() {
+            await loadSheets();
+            setupEventListeners();
+        }
 
-                async pullData() {
-                    this.loading = true;
-                    const res = await fetch(`${this.API_URL}?action=read&sheetName=${encodeURIComponent(this.currentSheet)}`);
-                    const data = await res.json();
-                    this.tasks = data.map(row => ({ content: row[0], progress: row[1] || 0 }));
-                    this.loading = false;
-                },
-
-                async toggleComplete(item) {
-                    item.progress = (item.progress == 100 ? 0 : 100);
-                    await fetch(`${this.API_URL}?action=update&sheetName=${encodeURIComponent(this.currentSheet)}&task=${encodeURIComponent(item.content)}&progress=${item.progress}`, { mode: 'no-cors' });
-                },
-
-                async addMainTask() {
-                    if (!this.newMainTaskName.trim()) return;
-                    const name = this.newMainTaskName.trim();
-                    this.tasks.unshift({ content: name, progress: 0 });
-                    this.newMainTaskName = '';
-                    await fetch(`${this.API_URL}?action=create&sheetName=${encodeURIComponent(this.currentSheet)}&task=${encodeURIComponent(name)}&progress=0`, { mode: 'no-cors' });
-                },
-
-                async deleteSingle(item) {
-                    if(!confirm('Delete this task?')) return;
-                    this.tasks = this.tasks.filter(t => t.content !== item.content);
-                    await fetch(`${this.API_URL}?action=delete&sheetName=${encodeURIComponent(this.currentSheet)}&tasks=${encodeURIComponent(JSON.stringify([item.content]))}`, { mode: 'no-cors' });
-                },
-
-                get avgProgress() {
-                    if (this.tasks.length === 0) return 0;
-                    return Math.round(this.tasks.reduce((sum, t) => sum + parseInt(t.progress), 0) / this.tasks.length);
+        // Load available sheets
+        async function loadSheets() {
+            try {
+                const response = await fetch(`${CONFIG.scriptUrl}?action=getSheets`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    allSheets = data.sheets;
+                    populateSheetSelector();
+                } else {
+                    showError('Failed to load sheets: ' + data.error);
                 }
+            } catch (error) {
+                showError('Error connecting to Google Sheets: ' + error.message);
             }
         }
+
+        // Populate sheet selector dropdown
+        function populateSheetSelector() {
+            const select = document.getElementById('sheetSelect');
+            select.innerHTML = '<option value="">-- Select a sheet --</option>';
+            
+            allSheets.forEach(sheet => {
+                const option = document.createElement('option');
+                option.value = sheet;
+                option.textContent = sheet;
+                select.appendChild(option);
+            });
+        }
+
+        // Load tasks from selected sheet
+        async function loadTasks(sheetName) {
+            if (!sheetName) {
+                document.getElementById('tasksContainer').innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <h3>Select a sheet to view tasks</h3>
+                    </div>
+                `;
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch(`${CONFIG.scriptUrl}?action=getTasks&sheet=${encodeURIComponent(sheetName)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayTasks(data.tasks);
+                } else {
+                    showError('Failed to load tasks: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error loading tasks: ' + error.message);
+            }
+        }
+
+        // Display tasks in the UI
+        function displayTasks(tasks) {
+            const container = document.getElementById('tasksContainer');
+            
+            if (!tasks || tasks.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                        <h3>No tasks found</h3>
+                        <p>Add your first task to get started!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = tasks.map((task, index) => `
+                <div class="task-item ${task.status === 'completed' ? 'completed' : ''}">
+                    <input type="checkbox" 
+                           class="task-checkbox" 
+                           ${task.status === 'completed' ? 'checked' : ''}
+                           data-row="${task.row}"
+                           onchange="toggleTaskStatus(${task.row})">
+                    <span class="task-text">${escapeHtml(task.task)}</span>
+                    <span class="task-status ${task.status === 'completed' ? 'status-completed' : 'status-incomplete'}">
+                        ${task.status === 'completed' ? '✓ Completed' : '○ Incomplete'}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        // Toggle task status
+        async function toggleTaskStatus(row) {
+            try {
+                const checkbox = document.querySelector(`input[data-row="${row}"]`);
+                const newStatus = checkbox.checked ? 'completed' : 'incomplete';
+                
+                const response = await fetch(CONFIG.scriptUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'updateTaskStatus',
+                        sheet: currentSheet,
+                        row: row,
+                        status: newStatus
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    await loadTasks(currentSheet);
+                } else {
+                    showError('Failed to update task: ' + data.error);
+                    checkbox.checked = !checkbox.checked;
+                }
+            } catch (error) {
+                showError('Error updating task: ' + error.message);
+            }
+        }
+
+        // Add new task
+        async function addTask() {
+            const taskInput = document.getElementById('newTask');
+            const taskText = taskInput.value.trim();
+            
+            if (!taskText) {
+                alert('Please enter a task description');
+                return;
+            }
+            
+            if (!currentSheet) {
+                alert('Please select a sheet first');
+                return;
+            }
+
+            try {
+                const response = await fetch(CONFIG.scriptUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'addTask',
+                        sheet: currentSheet,
+                        task: taskText
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    taskInput.value = '';
+                    await loadTasks(currentSheet);
+                } else {
+                    showError('Failed to add task: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error adding task: ' + error.message);
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('sheetSelect').addEventListener('change', (e) => {
+                currentSheet = e.target.value;
+                loadTasks(currentSheet);
+            });
+
+            document.getElementById('addTaskBtn').addEventListener('click', addTask);
+            
+            document.getElementById('newTask').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    addTask();
+                }
+            });
+
+            document.getElementById('refreshBtn').addEventListener('click', () => {
+                loadTasks(currentSheet);
+            });
+        }
+
+        // Utility functions
+        function showLoading() {
+            document.getElementById('tasksContainer').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading tasks...</p>
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            const container = document.getElementById('tasksContainer');
+            container.innerHTML = `
+                <div class="error">
+                    <strong>Error:</strong> ${escapeHtml(message)}
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Start the application
+        init();
     </script>
 </body>
 </html>
