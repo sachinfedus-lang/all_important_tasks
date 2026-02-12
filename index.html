@@ -104,6 +104,24 @@
             transform: none;
         }
 
+        .search-box {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            padding-left: 40px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 18px;
+        }
+
         .tasks-container {
             padding: 30px;
         }
@@ -127,6 +145,10 @@
         .task-item.completed {
             background: #f8f9fa;
             opacity: 0.8;
+        }
+
+        .task-item.hidden {
+            display: none;
         }
 
         .task-checkbox {
@@ -193,6 +215,14 @@
             opacity: 0.5;
         }
 
+        .task-count {
+            text-align: center;
+            padding: 10px;
+            color: #6c757d;
+            font-size: 14px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -225,6 +255,14 @@
             </div>
 
             <div class="control-group">
+                <label for="searchTask">Search Tasks:</label>
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchTask" placeholder="Type to search tasks...">
+                </div>
+            </div>
+
+            <div class="control-group">
                 <label for="newTask">Add New Task:</label>
                 <input type="text" id="newTask" placeholder="Enter task description...">
             </div>
@@ -252,6 +290,7 @@
         let currentSheet = '';
         let allSheets = [];
         let taskStatuses = {}; // Store completion status locally
+        let allTasks = []; // Store all tasks for filtering
 
         // Initialize the dashboard
         async function init() {
@@ -344,12 +383,57 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    displayTasks(data.tasks);
+                    allTasks = data.tasks;
+                    displayTasks(allTasks);
+                    // Clear search when switching sheets
+                    document.getElementById('searchTask').value = '';
                 } else {
                     showError('Failed to load tasks: ' + data.error);
                 }
             } catch (error) {
                 showError('Error loading tasks: ' + error.message);
+            }
+        }
+
+        // Filter tasks based on search query
+        function filterTasks() {
+            const searchQuery = document.getElementById('searchTask').value.toLowerCase();
+            const taskItems = document.querySelectorAll('.task-item');
+            
+            let visibleCount = 0;
+            taskItems.forEach(item => {
+                const taskText = item.querySelector('.task-text').textContent.toLowerCase();
+                if (taskText.includes(searchQuery)) {
+                    item.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            // Update task count
+            updateTaskCount(visibleCount, taskItems.length);
+        }
+
+        // Update task count display
+        function updateTaskCount(visible, total) {
+            let countDiv = document.querySelector('.task-count');
+            if (!countDiv) {
+                countDiv = document.createElement('div');
+                countDiv.className = 'task-count';
+                document.getElementById('tasksContainer').insertBefore(
+                    countDiv, 
+                    document.getElementById('tasksContainer').firstChild
+                );
+            }
+            
+            const completed = document.querySelectorAll('.task-item.completed:not(.hidden)').length;
+            const incomplete = visible - completed;
+            
+            if (visible < total) {
+                countDiv.textContent = `Showing ${visible} of ${total} tasks | ✓ ${completed} completed | ○ ${incomplete} incomplete`;
+            } else {
+                countDiv.textContent = `${total} tasks | ✓ ${completed} completed | ○ ${incomplete} incomplete`;
             }
         }
 
@@ -370,16 +454,15 @@
                 return;
             }
 
-            container.innerHTML = tasks.map((task, index) => {
+            const tasksHtml = tasks.map((task, index) => {
                 const taskId = getTaskId(currentSheet, task.task, task.row);
                 const status = getTaskStatus(taskId);
                 
                 return `
-                    <div class="task-item ${status === 'completed' ? 'completed' : ''}">
+                    <div class="task-item ${status === 'completed' ? 'completed' : ''}" data-task-id="${escapeHtml(taskId)}">
                         <input type="checkbox" 
                                class="task-checkbox" 
                                ${status === 'completed' ? 'checked' : ''}
-                               data-task-id="${escapeHtml(taskId)}"
                                onchange="toggleTaskStatus('${escapeHtml(taskId)}')">
                         <span class="task-text">${escapeHtml(task.task)}</span>
                         <span class="task-status ${status === 'completed' ? 'status-completed' : 'status-incomplete'}">
@@ -388,18 +471,21 @@
                     </div>
                 `;
             }).join('');
+
+            container.innerHTML = `<div class="task-count"></div>` + tasksHtml;
+            updateTaskCount(tasks.length, tasks.length);
         }
 
         // Toggle task status (local only, no Google Sheets update)
         function toggleTaskStatus(taskId) {
-            const checkbox = document.querySelector(`input[data-task-id="${taskId}"]`);
+            const checkbox = document.querySelector(`.task-item[data-task-id="${taskId}"] .task-checkbox`);
             const newStatus = checkbox.checked ? 'completed' : 'incomplete';
             
             setTaskStatus(taskId, newStatus);
             loadTasks(currentSheet);
         }
 
-        // Add new task
+        // Add new task with better error handling
         async function addTask() {
             const taskInput = document.getElementById('newTask');
             const taskText = taskInput.value.trim();
@@ -414,17 +500,18 @@
                 return;
             }
 
+            // Disable button while adding
+            const addBtn = document.getElementById('addTaskBtn');
+            addBtn.disabled = true;
+            addBtn.textContent = '⏳ Adding...';
+
             try {
-                const response = await fetch(CONFIG.scriptUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'addTask',
-                        sheet: currentSheet,
-                        task: taskText
-                    })
+                // Using URLSearchParams for better compatibility
+                const url = `${CONFIG.scriptUrl}?action=addTask&sheet=${encodeURIComponent(currentSheet)}&task=${encodeURIComponent(taskText)}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    redirect: 'follow'
                 });
 
                 const data = await response.json();
@@ -436,7 +523,11 @@
                     showError('Failed to add task: ' + data.error);
                 }
             } catch (error) {
-                showError('Error adding task: ' + error.message);
+                showError('Error adding task: ' + error.message + '. Please make sure your Apps Script is deployed correctly.');
+                console.error('Add task error:', error);
+            } finally {
+                addBtn.disabled = false;
+                addBtn.textContent = '➕ Add Task';
             }
         }
 
@@ -458,6 +549,9 @@
             document.getElementById('refreshBtn').addEventListener('click', () => {
                 loadTasks(currentSheet);
             });
+
+            // Search functionality
+            document.getElementById('searchTask').addEventListener('input', filterTasks);
         }
 
         // Utility functions
@@ -472,11 +566,18 @@
 
         function showError(message) {
             const container = document.getElementById('tasksContainer');
-            container.innerHTML = `
-                <div class="error">
-                    <strong>Error:</strong> ${escapeHtml(message)}
-                </div>
-            `;
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.innerHTML = `<strong>Error:</strong> ${escapeHtml(message)}`;
+            
+            // Keep existing content if any
+            const existingContent = container.innerHTML;
+            if (existingContent && !existingContent.includes('loading')) {
+                container.insertBefore(errorDiv, container.firstChild);
+            } else {
+                container.innerHTML = '';
+                container.appendChild(errorDiv);
+            }
         }
 
         function escapeHtml(text) {
