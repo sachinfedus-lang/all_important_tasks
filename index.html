@@ -251,11 +251,46 @@
 
         let currentSheet = '';
         let allSheets = [];
+        let taskStatuses = {}; // Store completion status locally
 
         // Initialize the dashboard
         async function init() {
+            loadTaskStatuses();
             await loadSheets();
             setupEventListeners();
+        }
+
+        // Load task statuses from localStorage
+        function loadTaskStatuses() {
+            const stored = localStorage.getItem('taskStatuses');
+            if (stored) {
+                try {
+                    taskStatuses = JSON.parse(stored);
+                } catch (e) {
+                    taskStatuses = {};
+                }
+            }
+        }
+
+        // Save task statuses to localStorage
+        function saveTaskStatuses() {
+            localStorage.setItem('taskStatuses', JSON.stringify(taskStatuses));
+        }
+
+        // Generate unique task ID
+        function getTaskId(sheetName, taskText, row) {
+            return `${sheetName}___${row}___${taskText}`;
+        }
+
+        // Get task status
+        function getTaskStatus(taskId) {
+            return taskStatuses[taskId] || 'incomplete';
+        }
+
+        // Set task status
+        function setTaskStatus(taskId, status) {
+            taskStatuses[taskId] = status;
+            saveTaskStatuses();
         }
 
         // Load available sheets
@@ -335,51 +370,33 @@
                 return;
             }
 
-            container.innerHTML = tasks.map((task, index) => `
-                <div class="task-item ${task.status === 'completed' ? 'completed' : ''}">
-                    <input type="checkbox" 
-                           class="task-checkbox" 
-                           ${task.status === 'completed' ? 'checked' : ''}
-                           data-row="${task.row}"
-                           onchange="toggleTaskStatus(${task.row})">
-                    <span class="task-text">${escapeHtml(task.task)}</span>
-                    <span class="task-status ${task.status === 'completed' ? 'status-completed' : 'status-incomplete'}">
-                        ${task.status === 'completed' ? '✓ Completed' : '○ Incomplete'}
-                    </span>
-                </div>
-            `).join('');
+            container.innerHTML = tasks.map((task, index) => {
+                const taskId = getTaskId(currentSheet, task.task, task.row);
+                const status = getTaskStatus(taskId);
+                
+                return `
+                    <div class="task-item ${status === 'completed' ? 'completed' : ''}">
+                        <input type="checkbox" 
+                               class="task-checkbox" 
+                               ${status === 'completed' ? 'checked' : ''}
+                               data-task-id="${escapeHtml(taskId)}"
+                               onchange="toggleTaskStatus('${escapeHtml(taskId)}')">
+                        <span class="task-text">${escapeHtml(task.task)}</span>
+                        <span class="task-status ${status === 'completed' ? 'status-completed' : 'status-incomplete'}">
+                            ${status === 'completed' ? '✓ Completed' : '○ Incomplete'}
+                        </span>
+                    </div>
+                `;
+            }).join('');
         }
 
-        // Toggle task status
-        async function toggleTaskStatus(row) {
-            try {
-                const checkbox = document.querySelector(`input[data-row="${row}"]`);
-                const newStatus = checkbox.checked ? 'completed' : 'incomplete';
-                
-                const response = await fetch(CONFIG.scriptUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'updateTaskStatus',
-                        sheet: currentSheet,
-                        row: row,
-                        status: newStatus
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    await loadTasks(currentSheet);
-                } else {
-                    showError('Failed to update task: ' + data.error);
-                    checkbox.checked = !checkbox.checked;
-                }
-            } catch (error) {
-                showError('Error updating task: ' + error.message);
-            }
+        // Toggle task status (local only, no Google Sheets update)
+        function toggleTaskStatus(taskId) {
+            const checkbox = document.querySelector(`input[data-task-id="${taskId}"]`);
+            const newStatus = checkbox.checked ? 'completed' : 'incomplete';
+            
+            setTaskStatus(taskId, newStatus);
+            loadTasks(currentSheet);
         }
 
         // Add new task
